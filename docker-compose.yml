@@ -1,0 +1,39 @@
+services:
+
+  database:
+    image: postgres
+    networks:
+      - backend
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+  backend:
+    environment:
+      - DB_HOST=database
+    image: django-docker:0.0.1
+    build: ./backend
+    ports:
+      - "8000:8000"
+    command: bash -c 'rm testdb/migrations/0*; python manage.py makemigrations; python manage.py migrate; python3 manage.py runserver'
+    networks:
+      - backend
+      - frontend
+    depends_on:
+
+      database:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
