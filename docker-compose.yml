@@ -1,39 +1,57 @@
-services:
+version: '3'
 
+services:
   database:
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=db
     image: postgres
     networks:
-      - backend
+      - backend_network
     volumes:
       - pgdata:/var/lib/postgresql/data
-
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
-
   backend:
     environment:
       - DB_HOST=database
-    image: django-docker:0.0.1
-    build: ./backend
-    ports:
-      - "8000:8000"
-    command: bash -c 'rm testdb/migrations/0*; python manage.py makemigrations; python manage.py migrate; python3 manage.py runserver'
+    build:
+      context: ./backend
+    command: bash -c "sleep 5; rm testdb/migrations/0*; python manage.py makemigrations; python manage.py migrate; python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      - database
     networks:
+      - backend_network
+
+  frontend:
+    build:
+      context: ./frontend
+    volumes:
+      - react_build:/react/build
+    command: bash -c 'npm run dev'
+    networks:
+      - backend_network
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - 8081:8080
+    networks:
+      - backend_network
+    volumes:
+      - ./nginx/nginx-setup.conf:/etc/nginx/conf.d/default.conf:ro
+      - react_build:/var/www/react
+    depends_on:
       - backend
       - frontend
-    depends_on:
-
-      database:
-        condition: service_healthy
-
 volumes:
+  react_build:
   pgdata:
 networks:
-  backend:
-    driver: bridge
-  frontend:
+  backend_network:
     driver: bridge
