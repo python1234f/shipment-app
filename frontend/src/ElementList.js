@@ -15,9 +15,8 @@ const ElementList = ({ type, url, elements, droppable, setElements }) => {
     fetch(`${BASE_API_URL}${url}`)
     .then(response => {
       response.json().then((data => {
-        debugger;
         setElements(data
-          .filter(e=>e.allocation===null)
+          .filter(e=>e.shipment===null)
           .map(e=>{return {...e, type}}))
       }))
     })
@@ -25,8 +24,9 @@ const ElementList = ({ type, url, elements, droppable, setElements }) => {
 
 
   return (
-    
+
     <Flex rounded="3px" bg="column-bg" h="220px" flexDir="row">
+
       <Flex
         align="center"
         h="60px"

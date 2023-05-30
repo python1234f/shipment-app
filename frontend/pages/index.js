@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
 import { BASE_API_URL } from "../src/config";
 
-const Allocation = dynamic(() => import("../src/Allocation"), { ssr: false });
+const Shipment = dynamic(() => import("../src/Shipment"), { ssr: false });
 const ElementList = dynamic(() => import("../src/ElementList"), { ssr: false });
 
 const reorderColumnList = (source, startIndex, endIndex) => {
@@ -16,38 +16,37 @@ const reorderColumnList = (source, startIndex, endIndex) => {
 export default function Home() {
   const [alertType, setAlertType] = useState(null);
   const [alertMessage, setAlertMessage] = useState(null);
-  const [allocationAttributes, setAllocationAttributes] = useState(allocationAttributesData);
+  const [shipmentAttributes, setShipmentAttributes] = useState(shipmentAttributesData);
   
-  const addAllocation = () => {
+  const addShipment = () => {
     
-    const newAllocations = [...allocations]
-    const id = Math.max(...newAllocations.map(e=>e.id)) + 1
-    const allocation = {
+    const newShipments = [...shipments]
+    const id = newShipments.length ? Math.max(...newShipments.map(e=>e.id)) + 1 : 1;
+    const shipment = {
       droppable: true,
       elements: [],
       id,
       name: "",
-      type: "allocation",
+      type: "shipment",
       date: "null"
     }
-    debugger;
-    newAllocations.push(allocation);
-    setAllocations(newAllocations);
+    newShipments.push(shipment);
+    setShipments(newShipments);
 
   }
 
   const saveAll = () => {
     let error = false;
-    allocations.forEach(allocation => {
-      const name = `allocation-${allocation.id}`
+    shipments.forEach(shipment => {
+      const name = `shipment-${shipment.id}`
       
-      if(allocation.date === "null"){
+      if(shipment.date === "null"){
         alert(`${name} must have a date`)
         error = true;
         return
       }
-      for(let type in allocationAttributes){
-        if (!allocation.elements.find(e=>e.type===type)){
+      for(let type in shipmentAttributes){
+        if (!shipment.elements.find(e=>e.type===type)){
           alert(`${type} missing from ${name}`)
           error = true;
           return
@@ -58,13 +57,13 @@ export default function Home() {
     if(error){
       return
     }
-    fetch(`${BASE_API_URL}allocations/`, {
+    fetch(`${BASE_API_URL}shipments/`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(allocations)
+      body: JSON.stringify(shipments)
     })
     .then(response => {
 
@@ -76,8 +75,6 @@ export default function Home() {
         }
 
       }))
-
-
     })
     .catch(e=>{
       alert(e)
@@ -90,40 +87,40 @@ export default function Home() {
     const { source } = result; 
     
     let sourceField
-    if(source.droppableId.includes('allocation')){
-      let id = parseInt(source.droppableId.slice("allocation-".length))
-      sourceField = allocations.find(e=>e.id===id);
+    if(source.droppableId.includes('shipment')){
+      let id = parseInt(source.droppableId.slice("shipment-".length))
+      sourceField = shipments.find(e=>e.id===id);
     } else {
-      sourceField = allocationAttributes[source.droppableId] 
+      sourceField = shipmentAttributes[source.droppableId] 
     }
 
     const dragged = sourceField.elements.find(el=>el.id === parseInt(
       result.draggableId.slice(el.type.length + 1)
     ) );
 
-    const newAllocations = [];
+    const newShipments = [];
 
-    allocations.forEach( (allocation) => {
+    shipments.forEach( (shipment) => {
 
-      newAllocations.push(allocation);
+      newShipments.push(shipment);
       
-      // If user tries to add anything to already complete allocation
-      if (allocation.complete) {
-        allocation.droppable = false;
+      // If user tries to add anything to already complete shipment
+      if (shipment.complete) {
+        shipment.droppable = false;
         return;
       }
 
-      // If allocation already has element of same type assigned, disallow dropping
-      for(let type in allocationAttributes){
+      // If shipment already has element of same type assigned, disallow dropping
+      for(let type in shipmentAttributes){
         if (dragged.type === type &&
-            allocation.elements.find(element => element.type === type)) {
+            shipment.elements.find(element => element.type === type)) {
             
-              if(allocation.id === sourceField.id){
-                // allow dropping to same allocation
+              if(shipment.id === sourceField.id){
+                // allow dropping to same shipment
                 return
               }
               message.current = ` already has ${type} assigned`
-              allocation.droppable = false;
+              shipment.droppable = false;
               return;
         }
       }
@@ -131,17 +128,17 @@ export default function Home() {
     })
 
     // allow only dropping back to the same ElementList
-    const newAllocationAttributes = {...allocationAttributes}
-    for(let type in allocationAttributes){
+    const newShipmentAttributes = {...shipmentAttributes}
+    for(let type in shipmentAttributes){
       if(dragged.type !== type){
-        newAllocationAttributes[type].droppable = false
+        newShipmentAttributes[type].droppable = false
       }
     }
-    if(newAllocationAttributes !== allocationAttributes){
-      setAllocationAttributes(newAllocationAttributes);
+    if(newShipmentAttributes !== shipmentAttributes){
+      setShipmentAttributes(newShipmentAttributes);
     }
 
-    setAllocations(newAllocations);
+    setShipments(newShipments);
 
   }
 
@@ -155,25 +152,25 @@ export default function Home() {
 
   }, [alertType]);
 
-  const [allocations, setAllocations] = useState([]);
+  const [shipments, setShipments] = useState([]);
 
   useEffect(() => {
-    console.log(`${BASE_API_URL}allocations`)
-    fetch(`${BASE_API_URL}allocations`)
+    console.log(`${BASE_API_URL}shipments`)
+    fetch(`${BASE_API_URL}shipments`)
     .then(response => {
       response.json().then((data => {
-        let allocations = []
-        data.forEach(allocation => {
-          allocation.elements = []
-          Object.values(allocationAttributes).map(e=>e.type).forEach(el=>{
-            allocation[el].type = el
-            allocation.elements.push(allocation[el])
-            delete allocation[el]
+        let shipments = []
+        data.forEach(shipment => {
+          shipment.elements = []
+          Object.values(shipmentAttributes).map(e=>e.type).forEach(el=>{
+            shipment[el].type = el
+            shipment.elements.push(shipment[el])
+            delete shipment[el]
           })
-          allocations.push({...allocation, type: "allocation", droppable: true})
+          shipments.push({...shipment, type: "shipment", droppable: true})
         })
 
-        setAllocations(allocations);
+        setShipments(shipments);
       }))
     })
   },[])
@@ -183,29 +180,29 @@ export default function Home() {
 
     // If user tried to drop on undroppable
     console.log('lastDroppedOn',lastDroppedOn)
-    console.log('allocations',allocations)
-    const allocation = allocations.find(e=>e.id===lastDroppedOn);
-    if ( allocation && (!allocation.droppable) ) {
+    console.log('shipments',shipments)
+    const shipment = shipments.find(e=>e.id===lastDroppedOn);
+    if ( shipment && (!shipment.droppable) ) {
       if (!withinSame) {
         setAlertType("warning")
-        let msg = [...`allocation ${allocation.id} ${message.current}`].join("")
+        let msg = [...`shipment ${shipment.id} ${message.current}`].join("")
         setAlertMessage(msg)
       }
     }
 
-    // Re-enable drop on allocations
-    const newAllocations = [...allocations]
-    newAllocations.forEach(allocation=>{
-      allocation.droppable = true;
+    // Re-enable drop on shipments
+    const newShipments = [...shipments]
+    newShipments.forEach(shipment=>{
+      shipment.droppable = true;
     })
-    const newAllocationAttributes = {...allocationAttributes}
-    for(let key in newAllocationAttributes){
-      newAllocationAttributes[key].droppable = true;
+    const newShipmentAttributes = {...shipmentAttributes}
+    for(let key in newShipmentAttributes){
+      newShipmentAttributes[key].droppable = true;
     }
 
     // Apply changes
-    setAllocationAttributes(newAllocationAttributes);
-    setAllocations(newAllocations)
+    setShipmentAttributes(newShipmentAttributes);
+    setShipments(newShipments)
 
   }
 
@@ -233,25 +230,25 @@ export default function Home() {
     }
 
     // If user tries to move between Attributes (e.g. move Vehicle to Employees list)
-    if( [...new Set([destination.droppableId, source.droppableId])].filter(e=>!e.includes("allocation")).length > 1){
+    if( [...new Set([destination.droppableId, source.droppableId])].filter(e=>!e.includes("shipment")).length > 1){
       setAlertType("warning")
       setAlertMessage(`Cannot move between ${destination.droppableId} and ${source.droppableId}`)   
     }
 
     let sourceField;
-    if(source.droppableId.includes('allocation')){
-      let id = parseInt(source.droppableId.slice("allocation-".length))
-      sourceField = allocations.find(e=>e.id===id);
+    if(source.droppableId.includes('shipment')){
+      let id = parseInt(source.droppableId.slice("shipment-".length))
+      sourceField = shipments.find(e=>e.id===id);
     } else {
-      sourceField = allocationAttributes[source.droppableId] 
+      sourceField = shipmentAttributes[source.droppableId] 
     }
 
     let destinationField;
-    if(destination.droppableId.includes('allocation')){
-      let id = parseInt(destination.droppableId.slice("allocation-".length))
-      destinationField = allocations.find(e=>e.id===id);
+    if(destination.droppableId.includes('shipment')){
+      let id = parseInt(destination.droppableId.slice("shipment-".length))
+      destinationField = shipments.find(e=>e.id===id);
     } else {
-      destinationField = allocationAttributes[destination.droppableId] 
+      destinationField = shipmentAttributes[destination.droppableId] 
     }
 
 
@@ -263,35 +260,30 @@ export default function Home() {
         destination.index
       );
 
-      if(newField.type !== "allocation") {
+      if(newField.type !== "shipment") {
         // use saved useState setter to set elements
         newField.setElements(newField.elements)
       } else {
-        const newAllocations = [...allocations]
-        newAllocations.find(e=>e.id===newField.id).elements = newField.elements;
-        newAllocations.forEach(allocation=>allocation.droppable=true)
+        const newShipments = [...shipments]
+        newShipments.find(e=>e.id===newField.id).elements = newField.elements;
+        newShipments.forEach(shipment=>shipment.droppable=true)
 
-        const newAllocationAttributes = {...allocationAttributes}
-        for(let key in newAllocationAttributes){
-          newAllocationAttributes[key].droppable = true;
+        const newShipmentAttributes = {...shipmentAttributes}
+        for(let key in newShipmentAttributes){
+          newShipmentAttributes[key].droppable = true;
         }
 
         // Apply changes
-        setAllocationAttributes(newAllocationAttributes);
-        setAllocations(newAllocations);
+        setShipmentAttributes(newShipmentAttributes);
+        setShipments(newShipments);
       }
-  
-      debugger;
-  
+    
       lastDroppedOn = null;
   
-      debugger;
-
       handlePostDrop();
       return;
     }
 
-    debugger;
     // If the user moves from one anything to another anything
     // const startElements = Array.from(sourceField.elements.map(el=>`${el.type}-${el.id}`));
     let [removed] = sourceField.elements.splice(source.index, 1);
@@ -299,65 +291,66 @@ export default function Home() {
 
     destinationField.elements.splice(destination.index, 0, removed);
 
-    allocations.forEach((allocation) => {
-      allocation.droppable = true;
+    shipments.forEach((shipment) => {
+      shipment.droppable = true;
     })
 
     const boxes = [destinationField, sourceField];
     
     boxes.forEach(box=>{
-      if(box.type !== "allocation") {
+      if(box.type !== "shipment") {
         // use saved useState setter to set elements
         box.setElements(box.elements)
       } else {
-        allocations.find(e=>e.id===box.id).elements = box.elements;
+        shipments.find(e=>e.id===box.id).elements = box.elements;
       }
     })
 
     lastDroppedOn = null;
 
-    const newAllocationAttributes = {...allocationAttributes}
-    for(let key in newAllocationAttributes){
-      newAllocationAttributes[key].droppable = true;
+    const newShipmentAttributes = {...shipmentAttributes}
+    for(let key in newShipmentAttributes){
+      newShipmentAttributes[key].droppable = true;
     }
-    const newAllocations = [...allocations]
-    newAllocations.forEach(allocation=>allocation.droppable=true)
-    setAllocations(newAllocations);
+    const newShipments = [...shipments]
+    newShipments.forEach(shipment=>shipment.droppable=true)
+    setShipments(newShipments);
 
   };
 
   const mouseUp = (event) => {
 
-    let allocationId = event.target.attributes.getNamedItem('data-rbd-droppable-id')
-    if (!allocationId) {
+    let shipmentId = event.target.attributes.getNamedItem('data-rbd-droppable-id')
+    if (!shipmentId) {
       return
     }
-    allocationId = allocationId.value;
-    lastDroppedOn = parseInt(allocationId.slice("allocation-".length));
+    shipmentId = shipmentId.value;
+    lastDroppedOn = parseInt(shipmentId.slice("shipment-".length));
 
-    console.log('mouseUp', allocationId)
+    console.log('mouseUp', shipmentId)
   
   }
   
   return (
     <>
+
       <DragDropContext onDragEnd={onDragEnd} onDragStart={onDragStart}>
 
       <Box bg="main-bg" h="calc(100vh)">
 
         {// Render boxes for all Attributes - right now it's vehicles and cars
-        Object.keys(allocationAttributes).map((key) => {
-          let allocationAttr = allocationAttributes[key];
+        Object.keys(shipmentAttributes).map((key) => {
+          let shipmentAttr = shipmentAttributes[key];
           const [elements, setElements] = useState([]);
-          allocationAttr.elements = elements;
-          allocationAttr.setElements = setElements;
+          shipmentAttr.elements = elements;
+          shipmentAttr.setElements = setElements;
 
-          const url = allocationAttr.url;
+          const url = shipmentAttr.url;
 
           const elementList = <ElementList 
-                                droppable={allocationAttr.droppable}
-                                key={`${allocationAttr.type}-${allocationAttr.id}`} 
-                                type={allocationAttr.type} url={url} 
+                                droppable={shipmentAttr.droppable}
+                                key={`${shipmentAttr.type}-${shipmentAttr.id}`} 
+                                type={shipmentAttr.type} url={url} 
                                 elements={elements} 
                                 setElements={setElements}>
                               </ElementList>
@@ -371,19 +364,19 @@ export default function Home() {
         })}
 
         <Box bg="main-bg" w='calc(100vw)'></Box>
-          <Button colorScheme='green' onClick={addAllocation}>Add Allocation</Button>
+          <Button colorScheme='green' onClick={addShipment}>Add Shipment</Button>
           <Button colorScheme='green' onClick={saveAll}>Save All</Button>
           <SimpleGrid p={20} spacing={10} minChildWidth={250} color="white-text" bg="main-bg">
 
-              {allocations.map((allocation) => {
+              {shipments.map((shipment) => {
                 return (
                   <Box>
                     <span onMouseUp={mouseUp}>
-                    <Allocation
-                      key={allocation.id} 
-                      allocation={allocation} 
-                      setAllocations={setAllocations}
-                      allocations={allocations}
+                    <Shipment
+                      key={shipment.id} 
+                      shipment={shipment} 
+                      setShipments={setShipments}
+                      shipments={shipments}
                     />
                     </span>
                   </Box>
@@ -405,7 +398,8 @@ export default function Home() {
   );
 }
 
-const allocationAttributesData = {
+const shipmentAttributesData = {
   vehicle: {url :"vehicles", elements: null, setElements: null, type: 'vehicle', droppable: true},
   employee: {url :"employees", elements: null, setElements: null, type: 'employee', droppable: true},
+  content: {url :"contents", elements: null, setElements: null, type: 'content', droppable: true},
 };
